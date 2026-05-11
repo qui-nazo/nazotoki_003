@@ -248,6 +248,33 @@
       border-radius: 6px;
     }
 
+    /* ===== Info popup ===== */
+    .info-popup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1200;
+      cursor: pointer;
+      padding: 24px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .info-popup.open { display: flex; }
+    .info-popup-content {
+      background: #fff;
+      color: #000;
+      padding: 40px 56px;
+      border-radius: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.7;
+      max-width: 90vw;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
+    }
+
     /* ===== Intro overlay ===== */
     .intro-overlay {
       position: fixed;
@@ -332,6 +359,7 @@
   </div>
 
   <div class="lightbox" id="lightbox"><img id="lightbox-img" alt=""></div>
+  <div class="info-popup" id="info-popup"><div class="info-popup-content" id="info-popup-content"></div></div>
 
   <script>
     const MISSIONS = [
@@ -342,12 +370,12 @@
     ];
 
     const SETS = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-      { id: 'c', label: 'C' },
-      { id: 'd', label: 'D' },
-      { id: 'e', label: 'E' },
-      { id: 'f', label: 'F' },
+      { id: 'a', label: 'A', popup: 'Aセットに挑戦中\nすべてのパズルが解けたらクリア' },
+      { id: 'b', label: 'B', popup: 'Bセットに挑戦中\nすべてのナゾが解けたらクリア' },
+      { id: 'c', label: 'C', popup: 'Cセットに挑戦中\nすべてのクイズに正解できたらクリア' },
+      { id: 'd', label: 'D', popup: 'Dセットに挑戦中\n全3問のクイズのうち、2問正解できたらクリア' },
+      { id: 'e', label: 'E', popup: 'Eセットに挑戦中' },
+      { id: 'f', label: 'F', popup: 'Fセットに挑戦中' },
     ];
     const setImg = id => `material/chousakekka_${id}.png`;
 
@@ -441,6 +469,7 @@
             saveVis();
             playYobidashi();
             renderResults();
+            showInfoPopup(s.popup);
           };
         }
         btnContainer.appendChild(btn);
@@ -491,6 +520,7 @@
       }
       if (e.key === 'Escape') {
         if (introOverlay.classList.contains('open')) { endIntro(); return; }
+        if (infoPopup.classList.contains('open')) { closeInfoPopup(); return; }
         if (gmPanel.classList.contains('open')) toggleGM();
         closeLightbox();
       }
@@ -579,6 +609,19 @@
     introOverlay.addEventListener('click', advanceIntro);
     introVideo.addEventListener('ended', advanceIntro);
     document.getElementById('gm-start-intro').onclick = startIntro;
+
+    // ===== Info popup =====
+    const infoPopup = document.getElementById('info-popup');
+    const infoPopupContent = document.getElementById('info-popup-content');
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+    function showInfoPopup(text) {
+      infoPopupContent.innerHTML = text.split('\n').map(escapeHtml).join('<br>');
+      infoPopup.classList.add('open');
+    }
+    function closeInfoPopup() { infoPopup.classList.remove('open'); }
+    infoPopup.addEventListener('click', closeInfoPopup);
 
     // ===== Lightbox =====
     const lightbox = document.getElementById('lightbox');
