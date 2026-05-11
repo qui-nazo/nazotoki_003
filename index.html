@@ -338,7 +338,7 @@
       { id: 'f', label: '調査結果 F', img: 'material/chousakekka_f.png' },
     ];
 
-    const STORAGE_KEY = 'gm-visibility-v1';
+    const STORAGE_KEY = 'gm-visibility-v2';
     const DEFAULT_VIS = {
       missions: { mission1: true, mission2: false, last1: false, last2: false },
       results:  { b: false, d: false, f: false }
@@ -400,7 +400,7 @@
       const visibleResults = RESULTS.filter(r => vis.results[r.id]);
 
       if (!visibleResults.length) {
-        btnContainer.innerHTML = '<div style="color:#aaa;font-size:14px;padding:8px 0;">まだ公開されていません</div>';
+        btnContainer.innerHTML = '<div style="color:#aaa;font-size:14px;padding:8px 0;">まだ調査していません</div>';
         return;
       }
 
