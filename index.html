@@ -24,14 +24,14 @@
     }
     header .logo {
       height: 56px;
-      cursor: pointer;
       user-select: none;
       -webkit-user-drag: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     main {
       display: grid;
-      grid-template-columns: 7fr 3fr;
+      grid-template-columns: 8fr 2fr;
       gap: 20px;
       padding: 20px;
       max-width: 1600px;
@@ -101,9 +101,9 @@
       gap: 10px;
     }
     .result-btn {
-      padding: 14px 16px;
-      font-size: 15px;
-      font-weight: 600;
+      padding: 16px 18px;
+      font-size: 19px;
+      font-weight: 700;
       background: #fff;
       color: #000;
       border: 2px solid #000;
@@ -234,7 +234,7 @@
     </section>
 
     <aside class="panel right-panel">
-      <h2>調査結果</h2>
+      <h2>モノサーチャー調査結果</h2>
       <div class="result-btns" id="result-btns"></div>
     </aside>
   </main>
@@ -243,8 +243,8 @@
     <button class="gm-close" id="gm-close" aria-label="閉じる">×</button>
     <h2>GMメニュー</h2>
     <div class="hint">
-      Ctrl + Shift + G で開閉<br>
-      もしくはロゴを5回連続クリック
+      ロゴを3回連続タップで開閉<br>
+      （PCでは Ctrl + Shift + G でも可）
     </div>
 
     <div class="gm-section">
@@ -330,8 +330,6 @@
         const img = document.createElement('img');
         img.src = current.img;
         img.alt = current.label;
-        img.onclick = () => openLightbox(current.img, current.label);
-        img.style.cursor = 'zoom-in';
         view.appendChild(img);
       }
     }
@@ -404,13 +402,20 @@
 
     document.getElementById('gm-close').onclick = toggleGM;
 
+    document.addEventListener('click', (e) => {
+      if (!gmPanel.classList.contains('open')) return;
+      if (gmPanel.contains(e.target)) return;
+      if (e.target.id === 'logo') return;
+      toggleGM();
+    });
+
     let logoClicks = 0;
     let logoTimer = null;
     document.getElementById('logo').addEventListener('click', () => {
       logoClicks++;
       if (logoTimer) clearTimeout(logoTimer);
       logoTimer = setTimeout(() => { logoClicks = 0; }, 1500);
-      if (logoClicks >= 5) { logoClicks = 0; toggleGM(); }
+      if (logoClicks >= 3) { logoClicks = 0; toggleGM(); }
     });
 
     document.getElementById('gm-all-on').onclick = () => {
