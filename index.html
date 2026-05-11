@@ -429,7 +429,11 @@
         } else if (vis.challenging[s.id]) {
           btn.classList.add('is-challenging');
           btn.textContent = `${s.label}セット 挑戦中`;
-          btn.onclick = () => {};
+          btn.onclick = () => {
+            vis.challenging[s.id] = false;
+            saveVis();
+            renderResults();
+          };
         } else {
           btn.textContent = `${s.label}セットを解く`;
           btn.onclick = () => {
