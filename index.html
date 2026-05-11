@@ -239,6 +239,29 @@
       border-radius: 6px;
     }
 
+    /* ===== Intro overlay ===== */
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .intro-overlay.open { display: flex; }
+    .intro-overlay img,
+    .intro-overlay video {
+      max-width: 100%;
+      max-height: 100%;
+      display: none;
+      pointer-events: none;
+    }
+    .intro-overlay img.active,
+    .intro-overlay video.active { display: block; }
+
     @media (max-width: 600px) {
       body { overflow: auto; height: auto; }
       main { grid-template-columns: 1fr; }
@@ -283,11 +306,21 @@
       <div id="gm-results"></div>
     </div>
 
+    <div class="gm-section">
+      <h3>ゲーム進行</h3>
+      <button class="gm-action" id="gm-start-intro" style="width:100%;padding:12px;">イントロから開始</button>
+    </div>
+
     <div class="gm-actions">
       <button class="gm-action" id="gm-all-on">全て公開</button>
       <button class="gm-action" id="gm-all-off">全て非公開</button>
     </div>
   </aside>
+
+  <div class="intro-overlay" id="intro-overlay">
+    <img id="intro-img" alt="">
+    <video id="intro-video" playsinline></video>
+  </div>
 
   <div class="lightbox" id="lightbox"><img id="lightbox-img" alt=""></div>
 
@@ -421,6 +454,7 @@
         toggleGM();
       }
       if (e.key === 'Escape') {
+        if (introOverlay.classList.contains('open')) { endIntro(); return; }
         if (gmPanel.classList.contains('open')) toggleGM();
         closeLightbox();
       }
@@ -454,6 +488,60 @@
       RESULTS.forEach(r => vis.results[r.id] = false);
       saveVis(); renderAll();
     };
+
+    // ===== Intro overlay =====
+    const INTRO_STEPS = [
+      { type: 'image', src: 'material/title.png' },
+      { type: 'image', src: 'material/introduction.png' },
+      { type: 'video', src: 'material/countdown.mp4' },
+    ];
+    const introOverlay = document.getElementById('intro-overlay');
+    const introImg = document.getElementById('intro-img');
+    const introVideo = document.getElementById('intro-video');
+    let introStep = -1;
+
+    function startIntro() {
+      if (gmPanel.classList.contains('open')) toggleGM();
+      introStep = -1;
+      introOverlay.classList.add('open');
+      advanceIntro();
+    }
+
+    function advanceIntro() {
+      introStep++;
+      introImg.classList.remove('active');
+      introVideo.classList.remove('active');
+      introVideo.pause();
+
+      if (introStep >= INTRO_STEPS.length) {
+        endIntro();
+        return;
+      }
+      const step = INTRO_STEPS[introStep];
+      if (step.type === 'image') {
+        introImg.src = step.src;
+        introImg.classList.add('active');
+      } else if (step.type === 'video') {
+        introVideo.src = step.src;
+        introVideo.classList.add('active');
+        introVideo.currentTime = 0;
+        const p = introVideo.play();
+        if (p && p.catch) p.catch(() => { /* autoplay blocked — tap to advance */ });
+      }
+    }
+
+    function endIntro() {
+      introOverlay.classList.remove('open');
+      introImg.classList.remove('active');
+      introVideo.classList.remove('active');
+      introVideo.pause();
+      introVideo.removeAttribute('src');
+      introVideo.load();
+    }
+
+    introOverlay.addEventListener('click', advanceIntro);
+    introVideo.addEventListener('ended', advanceIntro);
+    document.getElementById('gm-start-intro').onclick = startIntro;
 
     // ===== Lightbox =====
     const lightbox = document.getElementById('lightbox');
