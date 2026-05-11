@@ -554,6 +554,20 @@
     function closeLightbox() { lightbox.classList.remove('open'); }
     lightbox.addEventListener('click', closeLightbox);
 
+    // ===== Preload all assets =====
+    function preloadAssets() {
+      const images = [
+        'material/title.png',
+        'material/introduction.png',
+        ...MISSIONS.map(m => m.img),
+        ...RESULTS.map(r => r.img),
+      ];
+      images.forEach(src => { const i = new Image(); i.src = src; });
+      // Video: fetch into HTTP cache so the intro plays without buffering delay
+      fetch('material/countdown.mp4', { cache: 'force-cache' }).catch(() => {});
+    }
+    preloadAssets();
+
     renderAll();
   </script>
 </body>
