@@ -124,19 +124,28 @@
       min-height: 0;
     }
     .result-btn {
-      padding: 16px 18px;
-      font-size: 19px;
+      padding: 14px 14px;
+      font-size: 17px;
       font-weight: 700;
       background: #fff;
       color: #000;
       border: 2px solid #000;
       border-radius: 8px;
       cursor: pointer;
-      transition: background .15s, transform .05s;
+      transition: background .15s, color .15s, border-color .15s, transform .05s;
       font-family: inherit;
     }
-    .result-btn:hover { background: #f0f0f0; }
     .result-btn:active { transform: scale(.98); }
+    .result-btn.is-challenging {
+      background: #1d6a35;
+      color: #fff;
+      border-color: #1d6a35;
+    }
+    .result-btn.is-show {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
 
     /* ===== GM panel (hidden) ===== */
     .gm-panel {
@@ -283,7 +292,7 @@
     </section>
 
     <aside class="panel right-panel">
-      <h2>モノサーチャー調査結果</h2>
+      <h2>モノサーチャー</h2>
       <div class="result-btns" id="result-btns"></div>
     </aside>
   </main>
@@ -332,16 +341,21 @@
       { id: 'last2',    label: 'Last Mission 2', img: 'material/last_mission_2.png' },
     ];
 
-    const RESULTS = [
-      { id: 'b', label: '調査結果 B', img: 'material/chousakekka_b.png' },
-      { id: 'd', label: '調査結果 D', img: 'material/chousakekka_d.png' },
-      { id: 'f', label: '調査結果 F', img: 'material/chousakekka_f.png' },
+    const SETS = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+      { id: 'c', label: 'C' },
+      { id: 'd', label: 'D' },
+      { id: 'e', label: 'E' },
+      { id: 'f', label: 'F' },
     ];
+    const setImg = id => `material/chousakekka_${id}.png`;
 
-    const STORAGE_KEY = 'gm-visibility-v2';
+    const STORAGE_KEY = 'gm-visibility-v3';
     const DEFAULT_VIS = {
-      missions: { mission1: true, mission2: false, last1: false, last2: false },
-      results:  { b: false, d: false, f: false }
+      missions:    { mission1: true, mission2: false, last1: false, last2: false },
+      results:     { a: false, b: false, c: false, d: false, e: false, f: false },
+      challenging: { a: false, b: false, c: false, d: false, e: false, f: false }
     };
 
     function loadVis() {
@@ -350,8 +364,9 @@
         if (s) {
           const parsed = JSON.parse(s);
           return {
-            missions: { ...DEFAULT_VIS.missions, ...(parsed.missions || {}) },
-            results:  { ...DEFAULT_VIS.results,  ...(parsed.results  || {}) },
+            missions:    { ...DEFAULT_VIS.missions,    ...(parsed.missions    || {}) },
+            results:     { ...DEFAULT_VIS.results,     ...(parsed.results     || {}) },
+            challenging: { ...DEFAULT_VIS.challenging, ...(parsed.challenging || {}) },
           };
         }
       } catch (e) { /* fallthrough */ }
@@ -393,22 +408,37 @@
       }
     }
 
+    const yobidashi = new Audio('material/mono_searcher_yobidashi.mp3');
+    yobidashi.preload = 'auto';
+    function playYobidashi() {
+      try { yobidashi.currentTime = 0; yobidashi.play().catch(() => {}); } catch (e) {}
+    }
+
     function renderResults() {
       const btnContainer = document.getElementById('result-btns');
       btnContainer.innerHTML = '';
 
-      const visibleResults = RESULTS.filter(r => vis.results[r.id]);
-
-      if (!visibleResults.length) {
-        btnContainer.innerHTML = '<div style="color:#aaa;font-size:14px;padding:8px 0;">まだ調査していません</div>';
-        return;
-      }
-
-      visibleResults.forEach(r => {
+      SETS.forEach(s => {
         const btn = document.createElement('button');
         btn.className = 'result-btn';
-        btn.textContent = r.label;
-        btn.onclick = () => openLightbox(r.img, r.label);
+
+        if (vis.results[s.id]) {
+          btn.classList.add('is-show');
+          btn.textContent = `${s.label}の調査結果を見る`;
+          btn.onclick = () => openLightbox(setImg(s.id), `${s.label} 調査結果`);
+        } else if (vis.challenging[s.id]) {
+          btn.classList.add('is-challenging');
+          btn.textContent = `${s.label}セット 挑戦中`;
+          btn.onclick = () => {};
+        } else {
+          btn.textContent = `${s.label}セットを解く`;
+          btn.onclick = () => {
+            vis.challenging[s.id] = true;
+            saveVis();
+            playYobidashi();
+            renderResults();
+          };
+        }
         btnContainer.appendChild(btn);
       });
     }
@@ -422,9 +452,11 @@
       MISSIONS.forEach(m => mC.appendChild(makeToggle(m, vis.missions, () => {
         saveVis(); renderTabs(); renderGM();
       })));
-      RESULTS.forEach(r => rC.appendChild(makeToggle(r, vis.results, () => {
-        saveVis(); renderResults(); renderGM();
-      })));
+      SETS.forEach(s => rC.appendChild(makeToggle(
+        { id: s.id, label: `${s.label}の調査結果を公開` },
+        vis.results,
+        () => { saveVis(); renderResults(); renderGM(); }
+      )));
     }
 
     function makeToggle(item, store, onChange) {
@@ -480,12 +512,13 @@
 
     document.getElementById('gm-all-on').onclick = () => {
       MISSIONS.forEach(m => vis.missions[m.id] = true);
-      RESULTS.forEach(r => vis.results[r.id] = true);
+      SETS.forEach(s => vis.results[s.id] = true);
       saveVis(); renderAll();
     };
     document.getElementById('gm-all-off').onclick = () => {
-      MISSIONS.forEach(m => vis.missions[m.id] = false);
-      RESULTS.forEach(r => vis.results[r.id] = false);
+      Object.keys(vis.missions).forEach(k => vis.missions[k] = false);
+      vis.missions.mission1 = true;
+      SETS.forEach(s => { vis.results[s.id] = false; vis.challenging[s.id] = false; });
       saveVis(); renderAll();
     };
 
@@ -560,11 +593,11 @@
         'material/title.png',
         'material/introduction.png',
         ...MISSIONS.map(m => m.img),
-        ...RESULTS.map(r => r.img),
+        ...SETS.map(s => setImg(s.id)),
       ];
       images.forEach(src => { const i = new Image(); i.src = src; });
-      // Video: fetch into HTTP cache so the intro plays without buffering delay
       fetch('material/countdown.mp4', { cache: 'force-cache' }).catch(() => {});
+      fetch('material/mono_searcher_yobidashi.mp3', { cache: 'force-cache' }).catch(() => {});
     }
     preloadAssets();
 
