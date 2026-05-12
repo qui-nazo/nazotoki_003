@@ -118,22 +118,31 @@
       flex-direction: column;
       border: 2px solid #888;
       border-radius: 8px;
-      padding: 14px 16px;
+      padding: 10px 16px;
       box-sizing: border-box;
       min-height: 0;
+      background: #fff;
+      color: #000;
     }
     .warehouse-title {
-      font-size: 16px;
+      font-size: 44px;
       font-weight: 700;
-      color: #eee;
-      margin-bottom: 10px;
+      color: #000;
+      margin-bottom: 6px;
       flex-shrink: 0;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+    .warehouse-title-red {
+      color: #d33;
     }
     .warehouse-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: repeat(5, 1fr);
-      gap: 10px;
+      gap: 8px;
       flex: 1;
       min-height: 0;
     }
@@ -388,6 +397,11 @@
     </div>
 
     <div class="gm-section">
+      <h3>倉庫タイトル</h3>
+      <div id="gm-warehouse-realtime"></div>
+    </div>
+
+    <div class="gm-section">
       <h3>調査結果公開</h3>
       <div id="gm-results"></div>
     </div>
@@ -457,7 +471,8 @@
       warehouse: {
         states: { mono_1: 0, mono_2: 0, mono_3: 0, mono_4: 0, mono_5: 0, mono_6: 0, mono_7: 0, mono_8: 0, mono_9: 0 },
         taps:   { mono_1: 0, mono_2: 0, mono_3: 0, mono_4: 0, mono_5: 0, mono_6: 0, mono_7: 0, mono_8: 0, mono_9: 0 }
-      }
+      },
+      warehouseRealtime: false
     };
 
     function loadVis() {
@@ -473,7 +488,8 @@
             warehouse: {
               states: { ...DEFAULT_VIS.warehouse.states, ...(pw.states || {}) },
               taps:   { ...DEFAULT_VIS.warehouse.taps,   ...(pw.taps   || {}) }
-            }
+            },
+            warehouseRealtime: !!parsed.warehouseRealtime
           };
         }
       } catch (e) { /* fallthrough */ }
@@ -525,7 +541,8 @@
 
       const title = document.createElement('div');
       title.className = 'warehouse-title';
-      title.textContent = '倉庫備品リスト(ゲーム開始時)';
+      const suffix = vis.warehouseRealtime ? '(リアルタイム)' : '(ゲーム開始時)';
+      title.innerHTML = '倉庫備品リスト<span class="warehouse-title-red">' + suffix + '</span>';
       wrap.appendChild(title);
 
       const grid = document.createElement('div');
@@ -612,8 +629,10 @@
     function renderGM() {
       const mC = document.getElementById('gm-missions');
       const rC = document.getElementById('gm-results');
+      const wC = document.getElementById('gm-warehouse-realtime');
       mC.innerHTML = '';
       rC.innerHTML = '';
+      wC.innerHTML = '';
 
       MISSIONS.forEach(m => mC.appendChild(makeToggle(m, vis.missions, () => {
         saveVis(); renderTabs(); renderGM();
@@ -623,6 +642,19 @@
         vis.results,
         () => { saveVis(); renderResults(); renderGM(); }
       )));
+
+      const wLbl = document.createElement('label');
+      wLbl.className = 'gm-toggle' + (vis.warehouseRealtime ? ' checked' : '');
+      const wCb = document.createElement('input');
+      wCb.type = 'checkbox';
+      wCb.checked = !!vis.warehouseRealtime;
+      wCb.onchange = () => {
+        vis.warehouseRealtime = wCb.checked;
+        saveVis(); renderTabs(); renderGM();
+      };
+      wLbl.appendChild(wCb);
+      wLbl.appendChild(document.createTextNode('リアルタイムに切替'));
+      wC.appendChild(wLbl);
     }
 
     function makeToggle(item, store, onChange) {
@@ -688,6 +720,7 @@
       vis.missions.mission1 = true;
       SETS.forEach(s => { vis.results[s.id] = false; vis.challenging[s.id] = false; });
       Object.keys(vis.warehouse.states).forEach(k => { vis.warehouse.states[k] = 0; vis.warehouse.taps[k] = 0; });
+      vis.warehouseRealtime = false;
       saveVis(); renderAll();
     };
 
