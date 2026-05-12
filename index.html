@@ -109,6 +109,56 @@
       font-size: 16px;
     }
 
+    /* ===== Warehouse view ===== */
+    .warehouse {
+      align-self: stretch;
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid #888;
+      border-radius: 8px;
+      padding: 14px 16px;
+      box-sizing: border-box;
+      min-height: 0;
+    }
+    .warehouse-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #eee;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .warehouse-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: repeat(5, 1fr);
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+    .warehouse-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .warehouse-item.empty {
+      cursor: default;
+    }
+    .warehouse-item img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
     /* ===== Right panel: investigation results ===== */
     .right-panel h2 {
       margin-bottom: 12px;
@@ -363,10 +413,30 @@
 
   <script>
     const MISSIONS = [
+      { id: 'warehouse', label: '倉庫備品リスト' },
       { id: 'mission1', label: 'Mission 1',     img: 'material/mission_1.png' },
       { id: 'mission2', label: 'Mission 2',     img: 'material/mission_2.png' },
       { id: 'last1',    label: 'Last Mission',  img: 'material/last_mission_1.png' },
       { id: 'last2',    label: 'Last Mission 2', img: 'material/last_mission_2.png' },
+    ];
+
+    const WAREHOUSE_ITEMS = {
+      mono_1: ['material/mono_1_1.png'],
+      mono_2: ['material/mono_2_1.png', 'material/mono_2_2.png'],
+      mono_3: ['material/mono_3_1.png', 'material/mono_3_2.png'],
+      mono_4: ['material/mono_4_1.png', 'material/mono_4_2.png'],
+      mono_5: ['material/mono_5_1.png'],
+      mono_6: ['material/mono_6_1.png'],
+      mono_7: ['material/mono_7_1.png'],
+      mono_8: ['material/mono_8_1.png', 'material/mono_8_2.png', 'material/mono_8_3.png'],
+      mono_9: [null, 'material/mono_9_1.png', 'material/mono_9_2.png', 'material/mono_9_3.png', 'material/mono_9_4.png'],
+    };
+    const WAREHOUSE_LAYOUT = [
+      ['mono_1', 'mono_6'],
+      ['mono_2', 'mono_7'],
+      ['mono_3', 'mono_8'],
+      ['mono_4', 'mono_9'],
+      ['mono_5', null],
     ];
 
     const SETS = [
@@ -379,11 +449,15 @@
     ];
     const setImg = id => `material/chousakekka_${id}.png`;
 
-    const STORAGE_KEY = 'gm-visibility-v3';
+    const STORAGE_KEY = 'gm-visibility-v4';
     const DEFAULT_VIS = {
-      missions:    { mission1: true, mission2: false, last1: false, last2: false },
+      missions:    { warehouse: true, mission1: true, mission2: false, last1: false, last2: false },
       results:     { a: false, b: false, c: false, d: false, e: false, f: false },
-      challenging: { a: false, b: false, c: false, d: false, e: false, f: false }
+      challenging: { a: false, b: false, c: false, d: false, e: false, f: false },
+      warehouse: {
+        states: { mono_1: 0, mono_2: 0, mono_3: 0, mono_4: 0, mono_5: 0, mono_6: 0, mono_7: 0, mono_8: 0, mono_9: 0 },
+        taps:   { mono_1: 0, mono_2: 0, mono_3: 0, mono_4: 0, mono_5: 0, mono_6: 0, mono_7: 0, mono_8: 0, mono_9: 0 }
+      }
     };
 
     function loadVis() {
@@ -391,10 +465,15 @@
         const s = localStorage.getItem(STORAGE_KEY);
         if (s) {
           const parsed = JSON.parse(s);
+          const pw = parsed.warehouse || {};
           return {
             missions:    { ...DEFAULT_VIS.missions,    ...(parsed.missions    || {}) },
             results:     { ...DEFAULT_VIS.results,     ...(parsed.results     || {}) },
             challenging: { ...DEFAULT_VIS.challenging, ...(parsed.challenging || {}) },
+            warehouse: {
+              states: { ...DEFAULT_VIS.warehouse.states, ...(pw.states || {}) },
+              taps:   { ...DEFAULT_VIS.warehouse.taps,   ...(pw.taps   || {}) }
+            }
           };
         }
       } catch (e) { /* fallthrough */ }
@@ -427,12 +506,66 @@
         view.innerHTML = '<div class="empty-state">まだミッションは公開されていません</div>';
         return;
       }
+      if (activeTab === 'warehouse') {
+        renderWarehouse(view);
+        return;
+      }
       const current = MISSIONS.find(m => m.id === activeTab);
-      if (current) {
+      if (current && current.img) {
         const img = document.createElement('img');
         img.src = current.img;
         img.alt = current.label;
         view.appendChild(img);
+      }
+    }
+
+    function renderWarehouse(view) {
+      const wrap = document.createElement('div');
+      wrap.className = 'warehouse';
+
+      const title = document.createElement('div');
+      title.className = 'warehouse-title';
+      title.textContent = '倉庫備品リスト(ゲーム開始時)';
+      wrap.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'warehouse-grid';
+      WAREHOUSE_LAYOUT.forEach(row => {
+        row.forEach(id => {
+          const cell = document.createElement('div');
+          cell.className = 'warehouse-item';
+          if (id) {
+            const states = WAREHOUSE_ITEMS[id];
+            const stateIdx = vis.warehouse.states[id] || 0;
+            const src = states[stateIdx];
+            if (src) {
+              const img = document.createElement('img');
+              img.src = src;
+              img.alt = id;
+              cell.appendChild(img);
+            }
+            cell.onclick = () => tapWarehouseItem(id);
+          } else {
+            cell.classList.add('empty');
+          }
+          grid.appendChild(cell);
+        });
+      });
+      wrap.appendChild(grid);
+      view.appendChild(wrap);
+    }
+
+    function tapWarehouseItem(id) {
+      const states = WAREHOUSE_ITEMS[id];
+      if (!states || states.length <= 1) return;
+      vis.warehouse.taps[id] = (vis.warehouse.taps[id] || 0) + 1;
+      if (vis.warehouse.taps[id] >= 3) {
+        vis.warehouse.taps[id] = 0;
+        vis.warehouse.states[id] = ((vis.warehouse.states[id] || 0) + 1) % states.length;
+        saveVis();
+        renderTabs();
+      } else {
+        saveVis();
       }
     }
 
@@ -551,8 +684,10 @@
     };
     document.getElementById('gm-all-off').onclick = () => {
       Object.keys(vis.missions).forEach(k => vis.missions[k] = false);
+      vis.missions.warehouse = true;
       vis.missions.mission1 = true;
       SETS.forEach(s => { vis.results[s.id] = false; vis.challenging[s.id] = false; });
+      Object.keys(vis.warehouse.states).forEach(k => { vis.warehouse.states[k] = 0; vis.warehouse.taps[k] = 0; });
       saveVis(); renderAll();
     };
 
@@ -636,11 +771,13 @@
 
     // ===== Preload all assets =====
     function preloadAssets() {
+      const warehouseImgs = Object.values(WAREHOUSE_ITEMS).flat().filter(Boolean);
       const images = [
         'material/title.png',
         'material/introduction.png',
-        ...MISSIONS.map(m => m.img),
+        ...MISSIONS.map(m => m.img).filter(Boolean),
         ...SETS.map(s => setImg(s.id)),
+        ...warehouseImgs,
       ];
       images.forEach(src => { const i = new Image(); i.src = src; });
       fetch('material/countdown.mp4', { cache: 'force-cache' }).catch(() => {});
