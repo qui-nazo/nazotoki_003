@@ -155,7 +155,9 @@
       min-width: 0;
       overflow: hidden;
       -webkit-tap-highlight-color: transparent;
+      transition: opacity .75s ease;
     }
+    .warehouse-item.fading { opacity: 0; }
     .warehouse-item.empty {
       cursor: default;
     }
@@ -552,6 +554,7 @@
           const cell = document.createElement('div');
           cell.className = 'warehouse-item';
           if (id) {
+            cell.dataset.id = id;
             const states = WAREHOUSE_ITEMS[id];
             const stateIdx = vis.warehouse.states[id] || 0;
             const src = states[stateIdx];
@@ -572,7 +575,15 @@
       view.appendChild(wrap);
     }
 
+    const animatingCells = new Set();
+    const sharara = new Audio('material/sharara.mp3');
+    sharara.preload = 'auto';
+    function playSharara() {
+      try { sharara.currentTime = 0; sharara.play().catch(() => {}); } catch (e) {}
+    }
+
     function tapWarehouseItem(id) {
+      if (animatingCells.has(id)) return;
       const states = WAREHOUSE_ITEMS[id];
       if (!states || states.length <= 1) return;
       vis.warehouse.taps[id] = (vis.warehouse.taps[id] || 0) + 1;
@@ -580,10 +591,33 @@
         vis.warehouse.taps[id] = 0;
         vis.warehouse.states[id] = ((vis.warehouse.states[id] || 0) + 1) % states.length;
         saveVis();
-        renderTabs();
+        animateWarehouseChange(id);
       } else {
         saveVis();
       }
+    }
+
+    function animateWarehouseChange(id) {
+      animatingCells.add(id);
+      playSharara();
+      const cell = document.querySelector('.warehouse-item[data-id="' + id + '"]');
+      if (!cell) { animatingCells.delete(id); return; }
+      cell.classList.add('fading');
+      setTimeout(() => {
+        const stillCell = document.querySelector('.warehouse-item[data-id="' + id + '"]');
+        if (!stillCell) { animatingCells.delete(id); return; }
+        stillCell.innerHTML = '';
+        const states = WAREHOUSE_ITEMS[id];
+        const src = states[vis.warehouse.states[id] || 0];
+        if (src) {
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = id;
+          stillCell.appendChild(img);
+        }
+        stillCell.classList.remove('fading');
+        setTimeout(() => animatingCells.delete(id), 750);
+      }, 750);
     }
 
     const yobidashi = new Audio('material/mono_searcher_yobidashi.mp3');
@@ -815,6 +849,7 @@
       images.forEach(src => { const i = new Image(); i.src = src; });
       fetch('material/countdown.mp4', { cache: 'force-cache' }).catch(() => {});
       fetch('material/mono_searcher_yobidashi.mp3', { cache: 'force-cache' }).catch(() => {});
+      fetch('material/sharara.mp3', { cache: 'force-cache' }).catch(() => {});
     }
     preloadAssets();
 
